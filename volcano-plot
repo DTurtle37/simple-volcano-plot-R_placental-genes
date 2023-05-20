@@ -1,0 +1,45 @@
+library(DESeq2)
+library(readxl)
+library(ggplot2)
+library(ggrepel)
+tri1_2 <- read_excel("C:\\Users\\jenya\\Documents\\R\\difexp_1_2.xlsx")			# Reading input files that contain differentially expressed genes in human
+																																						# placenta between second and first pregnancy trimesters.
+
+tri1_2$Expression <- "NOT SIGNIFICANT"																			# Classifying expression changes in genes as non significant and genes as up-
+tri1_2$Expression[tri1_2$logFC > 1 & tri1_2$adj.P.Val < 0.05] <- "UP" 			# and down regulated.
+tri1_2$Expression[tri1_2$logFC < -1 & tri1_2$adj.P.Val < 0.05] <- "DOWN"
+
+mycolors <- c("blue", "red", "dimgrey", "purple")
+names(mycolors) <- c("DOWN", "UP", "NOT SIGNIFICANT", "MOST SIGNIFICANT")
+
+tri1_2$delabel <- NA                                              # Here we create an empty value that will save the labels for points on the future plot.
+
+tri1_2$pi.value <- abs(-log10(tri1_2$adj.P.Val)*tri1_2$logFC)     # Calculating π-value for all the genes for ranking them.
+
+tri1_2 <- tri1_2[order(tri1_2$pi.value, decreasing=TRUE),]        # Sorting genes from highest π-value to lowest.
+
+top10_tri1_2 <- tri1_2[1:10,]                                     # First 10 rows on the table copied into a separate variable (they are the 10 top-most
+                                                                  # exprssed genes.
+
+top10_tri1_2$delabel <- top10_tri1_2$SYMBOL                       # We are only interested in labeling the first 10 (top-10) genes, so we add their symbol
+                                                                  # to previously initialised label value
+
+
+p1 <- ggplot(data=tri1_2, aes(x=logFC, y=-log10(adj.P.Val), col=Expression, label=delabel))+    # Building the plot itself.
+ geom_point()+                                                                                  # Adding all datapoints from tri1_2 to the plot, including 
+ 																																																# the top-10.
+  
+ geom_point(data=top10_tri1_2, shape=1, col="green", fill=rgb(0,0,0, alpha=0), stroke=1, size=2.5)+   # Adding the top-10 genes again, but as green circles
+                                                                                                      # instead of points this time :)
+                                                                                                      # (using the field "shape=1").
+ 
+ theme_minimal()+                                                                               # Minimal plot design.                                                                              
+ geom_vline(xintercept=c(-1, 1), col="red", linetype=2)+                                        # Vertical separation lines at log2FC 1 and -1.
+ geom_hline(yintercept=-log10(0.05), col="red", linetype=2) +                                   # Horizontal like at -log10(0,05) (below are
+ 																																																# non-significant diffirentially expr. genes).
+  
+ geom_text_repel(data=top10_tri1_2, col="green", max.overlaps=10, force = 4, force_pull=1)+     # Drawing lables of the top-10 genes.
+  
+ scale_color_manual(values=c("red", "dimgrey", "blue", "purple"))                               # Adding the legend.
+
+p1																																															# Showing end result.
